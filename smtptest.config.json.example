@@ -7,6 +7,7 @@
   "Password": "your-password-here",
   "Subject": "SMTP Test",
   "Body": "This is a test email sent from the SMTP Tester GUI.",
+  "Attachments": [],
   "UseTls": true,
   "UseAuth": true
 }
