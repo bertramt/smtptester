@@ -25,7 +25,7 @@ Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SMTP Tester v$AppVersion"
-$form.Size = New-Object System.Drawing.Size(640, 794)
+$form.Size = New-Object System.Drawing.Size(640, 860)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedSingle"
 $form.MaximizeBox = $false
@@ -120,6 +120,33 @@ $txtTo      = Add-LabelTextBox "To Email:" "recipient@contoso.com"
 $txtUser    = Add-LabelTextBox "Username:" "user@contoso.com"
 $txtSubject = Add-LabelTextBox "Subject:" "SMTP Test"
 
+$lblAttach = New-Object System.Windows.Forms.Label
+$lblAttach.Location = New-Object System.Drawing.Point(20, $y)
+$lblAttach.Size = New-Object System.Drawing.Size($labelWidth, 20)
+$lblAttach.Text = "Attachments:"
+$form.Controls.Add($lblAttach)
+
+$lstAttachments = New-Object System.Windows.Forms.ListBox
+$lstAttachments.Location = New-Object System.Drawing.Point(150, $y)
+$lstAttachments.Size = New-Object System.Drawing.Size(320, 52)
+$lstAttachments.HorizontalScrollbar = $true
+$lstAttachments.SelectionMode = [System.Windows.Forms.SelectionMode]::MultiExtended
+$form.Controls.Add($lstAttachments)
+
+$btnAddAttachment = New-Object System.Windows.Forms.Button
+$btnAddAttachment.Location = New-Object System.Drawing.Point(480, $y)
+$btnAddAttachment.Size = New-Object System.Drawing.Size(110, 28)
+$btnAddAttachment.Text = "Add..."
+$form.Controls.Add($btnAddAttachment)
+
+$btnRemoveAttachment = New-Object System.Windows.Forms.Button
+$btnRemoveAttachment.Location = New-Object System.Drawing.Point(480, ($y + 30))
+$btnRemoveAttachment.Size = New-Object System.Drawing.Size(110, 28)
+$btnRemoveAttachment.Text = "Remove"
+$form.Controls.Add($btnRemoveAttachment)
+
+$y += 62
+
 $lblBody = New-Object System.Windows.Forms.Label
 $lblBody.Location = New-Object System.Drawing.Point(20, $y)
 $lblBody.Size = New-Object System.Drawing.Size($labelWidth, 20)
@@ -184,7 +211,7 @@ $y += 22
 
 $txtLog = New-Object System.Windows.Forms.TextBox
 $txtLog.Location = New-Object System.Drawing.Point(20, $y)
-$txtLog.Size = New-Object System.Drawing.Size(590, 200)
+$txtLog.Size = New-Object System.Drawing.Size(590, 175)
 $txtLog.Multiline = $true
 $txtLog.ReadOnly = $true
 $txtLog.ScrollBars = "Vertical"
@@ -317,16 +344,41 @@ function Get-SmtpSettings {
     }
 
     [pscustomobject]@{
-        Server   = $server
-        Port     = $port
-        From     = $txtFrom.Text.Trim()
-        To       = $txtTo.Text.Trim()
-        User     = $txtUser.Text.Trim()
-        Password = $txtPassword.Text
-        Subject  = $txtSubject.Text.Trim()
-        Body     = $txtBody.Text
-        UseTls   = $chkTLS.Checked
-        UseAuth  = $chkAuth.Checked
+        Server      = $server
+        Port        = $port
+        From        = $txtFrom.Text.Trim()
+        To          = $txtTo.Text.Trim()
+        User        = $txtUser.Text.Trim()
+        Password    = $txtPassword.Text
+        Subject     = $txtSubject.Text.Trim()
+        Body        = $txtBody.Text
+        Attachments = Get-AttachmentPaths
+        UseTls      = $chkTLS.Checked
+        UseAuth     = $chkAuth.Checked
+    }
+}
+
+function Get-AttachmentPaths {
+    $paths = @()
+    foreach ($item in $lstAttachments.Items) {
+        $path = [string]$item
+        if (-not [string]::IsNullOrWhiteSpace($path)) {
+            $paths += $path.Trim()
+        }
+    }
+    return $paths
+}
+
+function Set-AttachmentPaths {
+    param([string[]]$Paths)
+
+    $lstAttachments.Items.Clear()
+    if ($null -eq $Paths) { return }
+
+    foreach ($path in $Paths) {
+        if (-not [string]::IsNullOrWhiteSpace($path)) {
+            [void]$lstAttachments.Items.Add([string]$path.Trim())
+        }
     }
 }
 
@@ -357,6 +409,8 @@ function Set-UiBusy {
     $btnTestTcp.Enabled = -not $Busy
     $btnSaveConfig.Enabled = -not $Busy
     $btnReloadConfig.Enabled = -not $Busy
+    $btnAddAttachment.Enabled = -not $Busy
+    $btnRemoveAttachment.Enabled = -not $Busy
     $form.Cursor = if ($Busy) { [System.Windows.Forms.Cursors]::WaitCursor } else { [System.Windows.Forms.Cursors]::Default }
 }
 
@@ -369,9 +423,10 @@ function Get-UiConfig {
         Username   = $txtUser.Text
         Password   = $txtPassword.Text
         Subject    = $txtSubject.Text
-        Body       = $txtBody.Text
-        UseTls     = $chkTLS.Checked
-        UseAuth    = $chkAuth.Checked
+        Body        = $txtBody.Text
+        Attachments = @(Get-AttachmentPaths)
+        UseTls      = $chkTLS.Checked
+        UseAuth     = $chkAuth.Checked
     }
 }
 
@@ -406,6 +461,10 @@ function Set-UiFromConfig {
     if ($Config.PSObject.Properties.Name -contains 'UseAuth') {
         $chkAuth.Checked = ConvertTo-ConfigBool $Config.UseAuth
     }
+    if ($Config.PSObject.Properties.Name -contains 'Attachments') {
+        $paths = @($Config.Attachments | ForEach-Object { [string]$_ })
+        Set-AttachmentPaths $paths
+    }
 }
 
 function ConvertTo-ConfigBool {
@@ -427,7 +486,7 @@ function Export-SmtpConfig {
     param([string]$Path)
 
     $config = Get-UiConfig
-    $json = $config | ConvertTo-Json -Depth 3
+    $json = $config | ConvertTo-Json -Depth 4
     [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
 }
 
@@ -446,6 +505,40 @@ function Import-SmtpConfig {
     $config = $json | ConvertFrom-Json
     Set-UiFromConfig $config
 }
+
+$btnAddAttachment.Add_Click({
+    $dialog = New-Object System.Windows.Forms.OpenFileDialog
+    $dialog.Title = "Select attachments"
+    $dialog.Multiselect = $true
+    $dialog.CheckFileExists = $true
+
+    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
+
+    foreach ($filePath in $dialog.FileNames) {
+        if ($lstAttachments.Items -notcontains $filePath) {
+            [void]$lstAttachments.Items.Add($filePath)
+        }
+    }
+})
+
+$btnRemoveAttachment.Add_Click({
+    $selected = @($lstAttachments.SelectedItems)
+    if ($selected.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Select one or more attachments to remove.",
+            "Attachments",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+        return
+    }
+
+    foreach ($item in $selected) {
+        [void]$lstAttachments.Items.Remove($item)
+    }
+})
 
 $btnTestTcp.Add_Click({
     $txtLog.Clear()
@@ -503,6 +596,13 @@ $btnSend.Add_Click({
         $mail.Body = $settings.Body
         $mail.IsBodyHtml = $false
 
+        foreach ($attachmentPath in $settings.Attachments) {
+            if (-not (Test-Path -LiteralPath $attachmentPath)) {
+                throw "Attachment not found: $attachmentPath"
+            }
+            $mail.Attachments.Add((New-Object System.Net.Mail.Attachment($attachmentPath)))
+        }
+
         $smtp = New-SmtpClientFromSettings $settings
 
         if ($settings.UseTls) {
@@ -510,6 +610,9 @@ $btnSend.Add_Click({
         }
         if ($settings.UseAuth) {
             Write-Log "Authentication enabled (user: $($settings.User))"
+        }
+        if ($settings.Attachments.Count -gt 0) {
+            Write-Log "Attachments ($($settings.Attachments.Count)): $($settings.Attachments -join ', ')"
         }
 
         Write-Log "Connecting to $($settings.Server):$($settings.Port) ..."
