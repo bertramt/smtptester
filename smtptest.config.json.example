@@ -1,0 +1,12 @@
+{
+  "SmtpServer": "smtp.office365.com",
+  "Port": "587",
+  "From": "user@contoso.com",
+  "To": "recipient@contoso.com",
+  "Username": "user@contoso.com",
+  "Password": "your-password-here",
+  "Subject": "SMTP Test",
+  "Body": "This is a test email sent from the SMTP Tester GUI.",
+  "UseTls": true,
+  "UseAuth": true
+}
