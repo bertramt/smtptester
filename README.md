@@ -2,6 +2,8 @@
 
 A small Windows GUI for testing SMTP servers with authentication and TLS/SSL. Built with PowerShell and WinForms—no install required beyond PowerShell.
 
+> **AI disclaimer:** This repository—including the application, documentation, and release packaging—was developed with substantial assistance from AI coding tools. Content has been human-reviewed, but may contain errors or omissions. Use at your own risk; verify SMTP settings, credentials handling, and behavior in your environment before relying on it for production or security-sensitive work.
+
 **License:** [MIT](LICENSE)
 
 ## Requirements
@@ -21,7 +23,9 @@ A small Windows GUI for testing SMTP servers with authentication and TLS/SSL. Bu
 
    WinForms needs **`-STA`** when launching from a shell.
 
-3. Use **Test TCP Port** to verify connectivity, then **Send Test Email** to test TLS and authentication.
+3. Use **Test TCP Port** to verify connectivity, then **Send Test Email** to test TLS and authentication. Use **Add...** under Attachments to include files (optional).
+
+**Help → About** opens version info and a link to the [project on GitHub](https://github.com/bertramt/smtptester).
 
 ## Configuration
 
@@ -37,6 +41,7 @@ Settings are loaded from `smtptest.config.json` in the same folder as the script
 | `Password` | Auth password (stored in plain text—keep the file private) |
 | `Subject` | Test message subject |
 | `Body` | Test message body |
+| `Attachments` | Array of full file paths to attach (optional; paths are machine-specific) |
 | `UseTls` | `true` / `false` — enable TLS/SSL |
 | `UseAuth` | `true` / `false` — enable SMTP authentication |
 
@@ -76,4 +81,10 @@ The current version is in the [`VERSION`](VERSION) file and shown in the window 
 
 ## Distribution zip
 
-`smtptester.zip` contains the files needed to share the tool (not your personal `smtptest.config.json`).
+Build a release archive named **`smtptester-<version>.zip`** (for example `smtptester-2026.6.1.zip`):
+
+```powershell
+.\build.ps1
+```
+
+The zip includes the app, example config, `VERSION`, `LICENSE`, and this README—not your personal `smtptest.config.json`.
