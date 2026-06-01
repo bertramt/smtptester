@@ -18,17 +18,29 @@ if ([string]::IsNullOrWhiteSpace($AppVersion)) {
     $AppVersion = '0.0.0'  # CalVer: YYYY.M.D — see VERSION and README.md
 }
 
+$ProjectUrl = 'https://github.com/bertramt/smtptester'
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SMTP Tester v$AppVersion"
-$form.Size = New-Object System.Drawing.Size(640, 770)
+$form.Size = New-Object System.Drawing.Size(640, 794)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedSingle"
 $form.MaximizeBox = $false
 
-$y = 20
+$menuStrip = New-Object System.Windows.Forms.MenuStrip
+$menuHelp = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuHelp.Text = "&Help"
+$menuAbout = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuAbout.Text = "&About..."
+$menuHelp.DropDownItems.Add($menuAbout) | Out-Null
+$menuStrip.Items.Add($menuHelp) | Out-Null
+$form.MainMenuStrip = $menuStrip
+$form.Controls.Add($menuStrip)
+
+$y = 44
 $labelWidth = 120
 $inputWidth = 440
 
@@ -217,6 +229,54 @@ function Write-Log {
     $txtLog.SelectionStart = $txtLog.Text.Length
     $txtLog.ScrollToCaret()
     [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Show-AboutDialog {
+    $about = New-Object System.Windows.Forms.Form
+    $about.Text = "About SMTP Tester"
+    $about.ClientSize = New-Object System.Drawing.Size(380, 175)
+    $about.StartPosition = "CenterParent"
+    $about.FormBorderStyle = "FixedDialog"
+    $about.MaximizeBox = $false
+    $about.MinimizeBox = $false
+    $about.ShowInTaskbar = $false
+
+    $lblTitle = New-Object System.Windows.Forms.Label
+    $lblTitle.Location = New-Object System.Drawing.Point(20, 20)
+    $lblTitle.AutoSize = $true
+    $lblTitle.Font = New-Object System.Drawing.Font($about.Font.FontFamily, 11, [System.Drawing.FontStyle]::Bold)
+    $lblTitle.Text = "SMTP Tester v$AppVersion"
+
+    $lblDesc = New-Object System.Windows.Forms.Label
+    $lblDesc.Location = New-Object System.Drawing.Point(20, 50)
+    $lblDesc.Size = New-Object System.Drawing.Size(340, 36)
+    $lblDesc.Text = "Test SMTP servers with authentication and TLS/SSL."
+
+    $lnkGitHub = New-Object System.Windows.Forms.LinkLabel
+    $lnkGitHub.Location = New-Object System.Drawing.Point(20, 92)
+    $lnkGitHub.AutoSize = $true
+    $lnkGitHub.Text = $ProjectUrl
+    [void]$lnkGitHub.Links.Add(0, $ProjectUrl.Length, $ProjectUrl)
+    $lnkGitHub.Add_LinkClicked({
+        param($sender, $e)
+        Start-Process -FilePath ([string]$e.Link.LinkData)
+    })
+
+    $lblLicense = New-Object System.Windows.Forms.Label
+    $lblLicense.Location = New-Object System.Drawing.Point(20, 118)
+    $lblLicense.AutoSize = $true
+    $lblLicense.Text = "Licensed under the MIT License."
+
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Location = New-Object System.Drawing.Point(150, 135)
+    $btnOk.Size = New-Object System.Drawing.Size(80, 28)
+    $btnOk.Text = "OK"
+    $btnOk.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $about.AcceptButton = $btnOk
+
+    $about.Controls.AddRange(@($lblTitle, $lblDesc, $lnkGitHub, $lblLicense, $btnOk))
+    [void]$about.ShowDialog($form)
+    $about.Dispose()
 }
 
 function Get-SmtpSettings {
@@ -506,6 +566,8 @@ $btnSaveConfig.Add_Click({
         ) | Out-Null
     }
 })
+
+$menuAbout.Add_Click({ Show-AboutDialog })
 
 $btnReloadConfig.Add_Click({
     try {
